@@ -1,0 +1,454 @@
+<title>MBBR Plant Schematic</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!--PWA_HEAD-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap">
+<style>
+  /* Layout: one full-bleed stage; the plant drawing sits on a white sheet, controls float bottom-right. */
+  :root {
+    --stage: #17222c;        /* control-room slate around the drawing */
+    --sheet: #ffffff;        /* the drawing's own paper, as in the slide */
+    --chrome: #22303c;
+    --chrome-line: #34495a;
+    --ink: #e6edf2;
+    --muted: #93a6b5;
+    --accent: #2b8fd6;       /* the slide's air-header blue */
+    --live: #22c55e;
+    --live-glow: rgba(34, 197, 94, 0.6);
+    --hot: #0891b2;
+    --hot-fill: rgba(8, 145, 178, 0.07);
+    --glow: #22d3ee;
+    --hot-fill-strong: rgba(8, 145, 178, 0.16);
+    --font-ui: "Carlito", Calibri, "Segoe UI", Arial, sans-serif;
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    background: var(--stage);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app { position: relative; height: 100%; display: flex; flex-direction: column; }
+  .bar {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding-block: 8px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    border-bottom: 1px solid var(--chrome-line);
+    background: var(--chrome);
+  }
+  .bar { align-items: center; }
+  .bar h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: 0.01em; display: flex; align-items: center; gap: 10px; }
+  .live-dot {
+    width: 10px; height: 10px; border-radius: 50%; background: var(--live);
+    box-shadow: 0 0 0 0 var(--live-glow); animation: live 1.8s ease-out infinite;
+  }
+  @keyframes live { 0% { box-shadow: 0 0 0 0 var(--live-glow); } 100% { box-shadow: 0 0 0 9px transparent; } }
+  .clock { font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; padding-left: 12px; border-left: 1px solid var(--chrome-line); }
+  .bar .hint { color: var(--muted); font-size: 13px; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .hint-swatch { width: 16px; height: 12px; border-radius: 3px; border: 2px solid var(--hot); background: var(--hot-fill); box-shadow: 0 0 8px var(--glow); }
+  /* Tappable equipment: a soft cyan ring that breathes, solid while its popup is open. */
+  .hotspot { fill: var(--hot-fill); stroke: var(--hot); stroke-width: 2.2; }
+  .hotspot { stroke-opacity: 0.55; }
+  .glow-shape { filter: url(#icon-glow); }
+  .component.active .glow-shape { filter: url(#icon-glow-strong); }
+  .component.active .hotspot { stroke-width: 3; stroke-opacity: 1; fill: var(--hot-fill-strong); }
+  @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+  .stage {
+    position: relative; flex: 1; min-height: 0; overflow: hidden;
+    touch-action: none; cursor: grab;
+  }
+  .stage.dragging { cursor: grabbing; }
+  .sheet {
+    position: absolute; left: 0; top: 0;
+    transform-origin: 0 0;
+    background: var(--sheet);
+    border-radius: 6px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  }
+  .sheet svg { display: block; width: 100%; height: 100%; }
+  .controls {
+    position: absolute;
+    right: max(14px, env(safe-area-inset-right, 0px));
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    display: flex; gap: 6px;
+    background: var(--chrome); border: 1px solid var(--chrome-line);
+    border-radius: 12px; padding: 6px;
+  }
+  .controls button {
+    min-width: 48px; height: 48px; padding: 0 12px;
+    border: 0; border-radius: 8px;
+    background: transparent; color: var(--ink);
+    font: 700 15px var(--font-ui);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer;
+  }
+  .controls button:hover { background: var(--chrome-line); }
+  .controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .controls svg { width: 22px; height: 22px; }
+  .zoom-readout { min-width: 52px; text-align: center; font: 13px var(--font-ui); color: var(--muted); align-self: center; font-variant-numeric: tabular-nums; }
+  .toast {
+    position: absolute; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    max-width: min(520px, calc(100% - 32px));
+    background: var(--chrome); border: 1px solid var(--chrome-line); border-radius: 10px;
+    padding: 10px 14px; font-size: 14px; line-height: 1.4; color: var(--ink);
+  }
+  .component.tappable { cursor: pointer; }
+  .level-pop {
+    box-sizing: border-box;
+    position: absolute; width: 5cm; height: 5cm;
+    background: #ffffff; color: #000000;
+    border: 2px solid #000000; border-radius: 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    text-align: center; padding: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+  .level-pop .name { font-size: 14px; color: #374151; padding: 0 22px; }
+  .level-pop .reading { font-size: 22px; font-weight: 700; line-height: 1.15; }
+  .level-pop .close {
+    position: absolute; top: 0; right: 0; width: 40px; height: 40px;
+    border: 0; background: transparent; color: #000000; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .level-pop .close svg { width: 18px; height: 18px; }
+  .level-pop .close:focus-visible { outline: 2px solid #2b8fd6; outline-offset: -4px; }
+  #level-pop-body { display: contents; }
+  .level-pop .icon { width: 64px; height: 64px; }
+  .run-lamp {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #86efac, #16a34a 55%, #14532d);
+    border: 3px solid #14532d;
+    box-shadow: 0 0 14px rgba(34, 197, 94, 0.75);
+    color: #ffffff; font-weight: 700; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* Full-screen: the drawing gets the whole screen. */
+  @media (max-height: 420px) { .bar .hint { display: none; } }
+</style>
+
+<div class="app">
+  <header class="bar">
+    <h1><span class="live-dot" aria-hidden="true"></span>Live Status - MBBR STP</h1>
+    <time class="clock" id="clock"></time>
+    <span class="hint"><span class="hint-swatch" aria-hidden="true"></span>Tap a highlighted item for its status. Pinch to zoom.</span>
+  </header>
+  <main class="stage" id="stage">
+    <div class="sheet" id="sheet">
+<!--SCHEMATIC-->
+    </div>
+    <div class="controls" role="toolbar" aria-label="View controls">
+      <button type="button" id="zoom-out" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+      <span class="zoom-readout" id="zoom-readout">100%</span>
+      <button type="button" id="zoom-in" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M12 5v14"/></svg></button>
+      <button type="button" id="fit">Fit</button>
+      <button type="button" id="fullscreen" aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+    <div class="level-pop" id="level-pop" role="dialog" aria-live="polite" hidden>
+      <button type="button" class="close" id="level-pop-close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+      <span class="name" id="level-pop-name"></span>
+      <div id="level-pop-body"></div>
+    </div>
+    <div class="toast" id="toast" hidden></div>
+  </main>
+</div>
+
+<script>
+(() => {
+  // Drawing bounds inside the 1280x720 slide (the slide has empty margins top and bottom).
+  const VIEW = { x: 0, y: 40, w: 1280, h: 630 };
+  const MIN_ZOOM = 1, MAX_ZOOM = 8, PAD = 12;
+
+  const stage = document.getElementById('stage');
+  const sheet = document.getElementById('sheet');
+  const svg = sheet.querySelector('svg');
+  const readout = document.getElementById('zoom-readout');
+  const toast = document.getElementById('toast');
+
+  svg.setAttribute('viewBox', `${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`);
+  sheet.style.width = VIEW.w + 'px';
+  sheet.style.height = VIEW.h + 'px';
+
+  let fitScale = 1, scale = 1, tx = 0, ty = 0;
+
+  function apply() {
+    sheet.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    readout.textContent = Math.round((scale / fitScale) * 100) + '%';
+    placePopup();
+  }
+
+  // Level sensor popup: a fixed-size card next to the tapped "L" circle.
+  const pop = document.getElementById('level-pop');
+  const popName = document.getElementById('level-pop-name');
+  const popBody = document.getElementById('level-pop-body');
+  let openSensor = null;
+
+  // Demo readings for the tappable equipment (static values for the show-and-tell).
+  const DEVICES = {
+    'level-sensor-eq': { name: 'EQ tank', level: 50 },
+    'level-sensor-filter-feed': { name: 'Filter feed tank', level: 50 },
+    'level-sensor-treated': { name: 'Treated water tank', level: 30 },
+    'raw-water-pump': { name: 'Raw water pump', on: true },
+    'eq-lift-pump': { name: 'EQ lift pump', on: true },
+    'sludge-pump': { name: 'Sludge recirculation pump', on: true },
+    'filter-feed-pump': { name: 'Filter feed pump', on: true },
+    'air-blower': { name: 'Air blower', on: true },
+    'flow-meter-inlet': { name: 'Raw sewage inlet flow', flow: 2 },
+    'flow-meter-treated': { name: 'Treated water outlet flow', flow: 2 },
+    'pressure-sensor-psf': { name: 'Sand filter inlet pressure', pressure: 'Normal Pressure < 2 Bar' },
+  };
+
+  // Mark each tappable item with a ring around its equipment shapes (labels and callouts left out).
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  // Cyan halo around the icon shapes themselves; it breathes unless the viewer prefers reduced motion.
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const glowFilter = (id, dilate, blur, pulse) => `
+    <filter id="${id}" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="${dilate}" result="grown"/>
+      <feGaussianBlur in="grown" stdDeviation="${blur}" result="soft"/>
+      <feFlood flood-color="#06b6d4" flood-opacity="1">${pulse && !still
+        ? '<animate attributeName="flood-opacity" values="0.55;1;0.55" dur="2.4s" repeatCount="indefinite"/>' : ''}</feFlood>
+      <feComposite in2="soft" operator="in" result="halo"/>
+      <feMerge><feMergeNode in="halo"/><feMergeNode in="halo"/><feMergeNode in="halo"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>`;
+  svg.querySelector('defs').insertAdjacentHTML('beforeend',
+    glowFilter('icon-glow', 3, 4, true) + glowFilter('icon-glow-strong', 4, 5, false));
+  for (const id of Object.keys(DEVICES)) {
+    const g = document.getElementById(id);
+    g.classList.add('tappable');
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    g.querySelectorAll('rect, ellipse, circle, path, line').forEach(el => {
+      if (el.closest('.callout')) return;
+      const b = el.getBBox();
+      x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y);
+      x2 = Math.max(x2, b.x + b.width); y2 = Math.max(y2, b.y + b.height);
+    });
+    const pad = 6, ring = document.createElementNS(SVGNS, 'rect');
+    ring.setAttribute('class', 'hotspot');
+    ring.setAttribute('x', x1 - pad); ring.setAttribute('y', y1 - pad);
+    ring.setAttribute('width', x2 - x1 + pad * 2); ring.setAttribute('height', y2 - y1 + pad * 2);
+    ring.setAttribute('rx', 8);
+    // Move the icon's own shapes (not its labels) into a glowing wrapper.
+    const shapes = document.createElementNS(SVGNS, 'g');
+    shapes.setAttribute('class', 'glow-shape');
+    [...g.children].filter(el => el.tagName !== 'text' && !el.classList.contains('callout'))
+      .forEach(el => shapes.appendChild(el));
+    g.insertBefore(shapes, g.firstChild);
+    g.appendChild(ring);
+  }
+
+  const clock = document.getElementById('clock');
+  function tick() {
+    const now = new Date();
+    clock.dateTime = now.toISOString();
+    clock.textContent = now.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+      + '  ' + now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  function gaugeIcon() {
+    return `<svg class="icon" viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M32 62 V52" stroke="#334155" stroke-width="5"/>
+      <circle cx="32" cy="28" r="24" fill="#fff" stroke="#1F3A5F" stroke-width="3"/>
+      <path d="M16 40 A18 18 0 0 1 32 10" fill="none" stroke="#22c55e" stroke-width="4"/>
+      <path d="M32 10 A18 18 0 0 1 48 40" fill="none" stroke="#ef4444" stroke-width="4"/>
+      <path d="M32 28 L21 18" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="32" cy="28" r="3" fill="#111827"/>
+    </svg>`;
+  }
+
+  function flowIcon() {
+    return `<svg class="icon" viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M2 40 H62" stroke="#1F3A5F" stroke-width="6"/>
+      <rect x="18" y="32" width="28" height="16" rx="2" fill="#64748B" stroke="#334155" stroke-width="1.5"/>
+      <path d="M32 32 V26" stroke="#334155" stroke-width="3"/>
+      <circle cx="32" cy="15" r="12" fill="#fff" stroke="#1F3A5F" stroke-width="2.5"/>
+      <path d="M24 18 A9 9 0 0 1 40 18" fill="none" stroke="#94A3B8" stroke-width="2"/>
+      <path d="M32 15 L38 10" stroke="#D97706" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M50 54 h10 m-4 -4 l4 4 l-4 4" fill="none" stroke="#2b8fd6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  }
+
+  // Tank glyph filled to the given level.
+  function levelIcon(pct) {
+    const top = 8, bottom = 58, h = (bottom - top) * pct / 100;
+    return `<svg class="icon" viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="10" y="${bottom - h}" width="44" height="${h}" fill="#5aaee8"/>
+      <path d="M10 ${bottom - h} h44" stroke="#1f6fb0" stroke-width="2"/>
+      <path d="M10 6 V58 H54 V6" fill="none" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+      ${[25, 50, 75].map(t => `<path d="M54 ${bottom - (bottom - top) * t / 100} h-6" stroke="#000" stroke-width="1.5"/>`).join('')}
+    </svg>`;
+  }
+
+  function placePopup() {
+    if (!openSensor) return;
+    const r = stage.getBoundingClientRect(), b = openSensor.getBoundingClientRect();
+    const pw = pop.offsetWidth, ph = pop.offsetHeight, gap = 10;
+    let x = b.right - r.left + gap;
+    if (x + pw > r.width - 8) x = b.left - r.left - gap - pw;
+    let y = b.top - r.top + b.height / 2 - ph / 2;
+    pop.style.left = Math.max(8, Math.min(r.width - pw - 8, x)) + 'px';
+    pop.style.top = Math.max(8, Math.min(r.height - ph - 8, y)) + 'px';
+  }
+
+  function openPopup(sensor) {
+    if (openSensor && openSensor !== sensor) openSensor.classList.remove('active');
+    openSensor = sensor;
+    sensor.classList.add('active');
+    const d = DEVICES[sensor.id];
+    popName.textContent = d.name;
+    popBody.innerHTML = 'level' in d
+      ? `${levelIcon(d.level)}<span class="reading">Water level ${d.level}%</span>`
+      : 'pressure' in d
+      ? `${gaugeIcon()}<span class="reading">${d.pressure.replace('<', '&lt;')}</span>`
+      : 'flow' in d
+      ? `${flowIcon()}<span class="reading">Flow rate<br>${d.flow} m³/hr</span>`
+      : `<div class="run-lamp">ON</div><span class="reading">${d.name.endsWith('blower') ? 'Blower' : 'Pump'} is ON</span>`;
+    pop.hidden = false;
+    placePopup();
+  }
+
+  function closePopup() {
+    if (openSensor) openSensor.classList.remove('active');
+    openSensor = null; pop.hidden = true;
+  }
+  document.getElementById('level-pop-close').addEventListener('click', closePopup);
+
+  // Keep the sheet from being dragged off screen.
+  function clamp() {
+    const r = stage.getBoundingClientRect();
+    const w = VIEW.w * scale, h = VIEW.h * scale;
+    tx = w <= r.width ? (r.width - w) / 2 : Math.min(PAD, Math.max(r.width - w - PAD, tx));
+    ty = h <= r.height ? (r.height - h) / 2 : Math.min(PAD, Math.max(r.height - h - PAD, ty));
+  }
+
+  function fit() {
+    const r = stage.getBoundingClientRect();
+    fitScale = Math.min((r.width - PAD * 2) / VIEW.w, (r.height - PAD * 2) / VIEW.h);
+    scale = fitScale;
+    clamp(); apply();
+  }
+
+  // Zoom about a point given in stage coordinates.
+  function zoomAt(newScale, px, py) {
+    newScale = Math.min(fitScale * MAX_ZOOM, Math.max(fitScale * MIN_ZOOM, newScale));
+    tx = px - (px - tx) * (newScale / scale);
+    ty = py - (py - ty) * (newScale / scale);
+    scale = newScale;
+    clamp(); apply();
+  }
+
+  function centre() {
+    const r = stage.getBoundingClientRect();
+    return [r.width / 2, r.height / 2];
+  }
+
+  // Pointer handling: one finger pans, two fingers pinch.
+  const pts = new Map();
+  let pinch = null, lastTap = 0, lastTapPos = null, down = null;
+
+  function local(e) {
+    const r = stage.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
+  }
+
+  stage.addEventListener('pointerdown', e => {
+    if (e.target.closest('.controls, .level-pop')) return;
+    down = pts.size === 0 ? { id: e.pointerId, pos: local(e), target: e.target, moved: false } : null;
+    stage.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, local(e));
+    stage.classList.add('dragging');
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), s: scale };
+    }
+    if (pts.size === 1) {
+      const now = performance.now(), p = local(e);
+      if (now - lastTap < 300 && lastTapPos && Math.hypot(p[0] - lastTapPos[0], p[1] - lastTapPos[1]) < 30) {
+        if (Math.abs(scale - fitScale) < 0.001) zoomAt(fitScale * 2.5, p[0], p[1]); else fit();
+        lastTap = 0;
+      } else { lastTap = now; lastTapPos = p; }
+    }
+  });
+
+  stage.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    const prev = pts.get(e.pointerId), cur = local(e);
+    if (down && Math.hypot(cur[0] - down.pos[0], cur[1] - down.pos[1]) > 10) down.moved = true;
+    if (pts.size === 1) {
+      tx += cur[0] - prev[0]; ty += cur[1] - prev[1];
+      pts.set(e.pointerId, cur);
+      clamp(); apply();
+      return;
+    }
+    const before = [...pts.values()];
+    const midBefore = [(before[0][0] + before[1][0]) / 2, (before[0][1] + before[1][1]) / 2];
+    pts.set(e.pointerId, cur);
+    const [a, b] = [...pts.values()];
+    const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    tx += mid[0] - midBefore[0]; ty += mid[1] - midBefore[1];
+    if (pinch) zoomAt(pinch.s * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d, mid[0], mid[1]);
+  });
+
+  function release(e) {
+    if (e.type === 'pointerup' && down && down.id === e.pointerId && !down.moved && pts.size === 1) {
+      const sensor = down.target.closest && down.target.closest('.component.tappable');
+      if (sensor) { openPopup(sensor); lastTap = 0; } else closePopup();
+    }
+    if (pts.size > 1) down = null;
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (pts.size === 0) stage.classList.remove('dragging');
+  }
+  stage.addEventListener('pointerup', release);
+  stage.addEventListener('pointercancel', release);
+
+  stage.addEventListener('wheel', e => {
+    e.preventDefault();
+    const [x, y] = local(e);
+    zoomAt(scale * Math.exp(-e.deltaY * 0.0015), x, y);
+  }, { passive: false });
+
+  document.getElementById('zoom-in').addEventListener('click', () => zoomAt(scale * 1.4, ...centre()));
+  document.getElementById('zoom-out').addEventListener('click', () => zoomAt(scale / 1.4, ...centre()));
+  document.getElementById('fit').addEventListener('click', fit);
+
+  let toastTimer;
+  function say(msg) {
+    toast.textContent = msg; toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 5000);
+  }
+
+  document.getElementById('fullscreen').addEventListener('click', async () => {
+    try {
+      if (document.fullscreenElement) { await document.exitFullscreen(); return; }
+      await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+      try { await screen.orientation.lock('landscape'); } catch (_) { /* not every browser allows a lock */ }
+    } catch (_) {
+      say('This view does not allow full screen. In Chrome, open the menu and choose "Add to Home screen", then open it from there.');
+    }
+  });
+
+  // Keep the tablet screen awake during a demo, where the browser allows it.
+  async function wake() { try { await navigator.wakeLock.request('screen'); } catch (_) {} }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+  wake();
+
+  new ResizeObserver(fit).observe(stage);
+  if (document.fonts) document.fonts.ready.then(fit);
+  fit();
+
+  // Every plant component is an <svg> group: <g id="mbbr-1" class="component" data-label="MBBR Reactor 1">.
+  // A later "tap to light up" feature can select them with svg.querySelectorAll('.component').
+})();
+</script>
+<!--PWA_SCRIPT-->

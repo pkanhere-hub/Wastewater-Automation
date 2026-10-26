@@ -305,7 +305,11 @@ groups['pipe-treated-outlet'] = [
     '<path d="M%.2f %s H%s V%s" fill="none" stroke="#1F3A5F" stroke-width="4" stroke-linejoin="round" marker-end="url(#%s)"/>'
     % (OUT_X1, OUT_Y, OUT_X2, OUT_DROP, marker_for('#1F3A5F')),
     '<text x="%s" y="%s" font-size="11.3" font-weight="700" fill="#1F3A5F">Treated water out</text>' % (OUT_X2 + 8, OUT_DROP)]
-groups['flow-meter-inlet'] = [flow_meter(px(137160 + 548640 / 2), px(1847088))]
+# Inlet meter sits just below the raw sewage arrow, left of the bar screen, on a short tapping.
+IN_X, IN_PIPE_Y = 40, px(1847088)
+groups['raw-sewage-inlet'].append(
+    '<path d="M%s %.2f V%.2f" stroke="#334155" stroke-width="3"/>' % (IN_X, IN_PIPE_Y + 2, IN_PIPE_Y + 17))
+groups['flow-meter-inlet'] = [flow_meter(IN_X, IN_PIPE_Y + 24)]
 groups['flow-meter-treated'] = [flow_meter(492, OUT_Y)]
 
 # Pressure gauge on the riser from the filter feed pump up to the sand filter.

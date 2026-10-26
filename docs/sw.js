@@ -1,6 +1,6 @@
 // Offline support: pages come from the network when it's there (so updates show up),
 // and from the cache when it isn't. Icons and fonts are cache-first.
-const CACHE = 'mbbr-stp-v13';
+const CACHE = 'mbbr-stp-v14';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-512.png'];
 
 self.addEventListener('install', e => {

@@ -56,7 +56,7 @@ COMPONENTS = [
 # Callouts moved so they no longer sit on top of the tank labels (x, y, w, h, size in 1/100 pt)
 CALLOUT_MOVES = {
     'Raw Water Pump': (3520440, 3296000, 1371600, 240000, 1400),
-    'Sludge Recirculation': (9420000, 3128509, 1300000, 694944, None),
+    'Sludge Recirculation': (9420000, 3128509, 1300000, 694944, 1400),
     'Feed Pump': (8540496, 5806440, 1463040, 320040, 1600),
 }
 
@@ -68,6 +68,7 @@ GROUP_MOVES = {'Group 374': (3557016, 2880360)}  # raw water pump, off the EQ ta
 SHAPE_MOVES = {
     'Label_194': (137160, 1335024, 548640, 320040, None),  # "Raw sewage", clear of the flow meter
     'ToTreatedTank_339': (4406147, 4389120, 685800, 0, None),  # level with the carbon filter line
+    'Label_343': (1377591, 3273552, 1691640, 403597, 1400),  # "NaOCl dosing", smaller to match the pump labels
 }
 
 
@@ -266,6 +267,8 @@ for el in tree:
         svg = '<g class="callout">%s</g>' % render_shape(el, override=CALLOUT_MOVES.get(callout))
     else:
         svg = render_shape(el, override=SHAPE_MOVES.get(key))
+    if callout or key == 'Label_343':
+        svg = re.sub(r'<rect [^>]*fill="#D9D9D9"/>', '', svg)  # plain text labels, no grey box
     if cid not in groups:
         groups[cid] = []
         order.append(cid)

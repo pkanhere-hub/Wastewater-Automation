@@ -65,7 +65,10 @@ SUBTITLE_GREY = '#4B5563'
 DROP_SHAPES = {'Label_353'}  # "Feed pumps" note; the Feed Pump callout already names it
 # Re-spacing so nothing overlaps: group -> new top-left (EMU); shape -> override box
 GROUP_MOVES = {'Group 374': (3557016, 2880360)}  # raw water pump, off the EQ tank label
-SHAPE_MOVES = {'Label_194': (137160, 1335024, 548640, 320040, None)}  # "Raw sewage", clear of the flow meter
+SHAPE_MOVES = {
+    'Label_194': (137160, 1335024, 548640, 320040, None),  # "Raw sewage", clear of the flow meter
+    'ToTreatedTank_339': (4406147, 4389120, 685800, 0, None),  # level with the carbon filter line
+}
 
 
 def comp_for(key):

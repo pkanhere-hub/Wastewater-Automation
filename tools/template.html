@@ -60,7 +60,20 @@
   .glow-shape { filter: url(#icon-glow); }
   .component.active .glow-shape { filter: url(#icon-glow-strong); }
   .component.active .hotspot { stroke-width: 3; stroke-opacity: 1; fill: var(--hot-fill-strong); }
-  @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+  /* "Plant is live" motion: surface waves, rising air bubbles, water running along the outlet. */
+  .live-anim { pointer-events: none; }
+  .wave { animation: wave var(--dur, 3s) linear infinite; }
+  @keyframes wave { from { transform: translateX(0); } to { transform: translateX(var(--len, 24px)); } }
+  .bubble { animation: rise var(--dur, 3s) linear infinite; animation-delay: var(--delay, 0s); }
+  @keyframes rise {
+    0% { transform: translateY(0); opacity: 0; }
+    10% { opacity: 0.95; }
+    85% { opacity: 0.95; }
+    100% { transform: translateY(var(--rise, -70px)); opacity: 0; }
+  }
+  .outflow { stroke-dasharray: 7 9; animation: outflow 0.9s linear infinite; }
+  @keyframes outflow { to { stroke-dashoffset: -16; } }
+  @media (prefers-reduced-motion: reduce) { .live-dot, .wave, .bubble, .outflow { animation: none; } }
   .stage {
     position: relative; flex: 1; min-height: 0; overflow: hidden;
     touch-action: none; cursor: grab;
@@ -243,6 +256,57 @@
     g.insertBefore(shapes, g.firstChild);
     g.appendChild(ring);
   }
+
+  // Live motion, drawn in slide pixels (1280x720). Each layer sits inside its unit's group.
+  (function liveMotion() {
+    const add = (parentId, markup) =>
+      document.getElementById(parentId).insertAdjacentHTML('beforeend', `<g class="live-anim">${markup}</g>`);
+    let clipN = 0;
+
+    // A wavy water surface that slides sideways, clipped to the tank's width.
+    function wave(parentId, x, y, w, { amp, len, dur, colour, fill }) {
+      const id = 'wave-clip-' + (++clipN);
+      let d = `M${x - len} ${y}`;
+      for (let px = x - len; px < x + w + len; px += len) {
+        d += ` q${len / 4} ${-amp} ${len / 2} 0 t${len / 2} 0`;
+      }
+      add(parentId, `
+        <clipPath id="${id}"><rect x="${x}" y="${y - amp - 2}" width="${w}" height="${amp * 2 + 10}"/></clipPath>
+        <g clip-path="url(#${id})">
+          <g class="wave" style="--len:${len}px;--dur:${dur}s">
+            <path d="${d} V${y + 8} H${x - len} Z" fill="${fill}"/>
+            <path d="${d}" fill="none" stroke="${colour}" stroke-width="1.6"/>
+          </g>
+        </g>`);
+    }
+
+    // Air bubbles rising from a diffuser to the water surface.
+    function bubbles(parentId, x, w, fromY, toY, count, seed) {
+      let r = seed, out = '';
+      const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+      for (let i = 0; i < count; i++) {
+        const cx = x + 4 + rnd() * (w - 8), size = 1.6 + rnd() * 2, dur = 2.2 + rnd() * 1.8;
+        out += `<circle class="bubble" cx="${cx.toFixed(1)}" cy="${fromY}" r="${size.toFixed(1)}"
+          fill="#ffffff" stroke="#5B8DB8" stroke-width="0.6"
+          style="--dur:${dur.toFixed(2)}s;--delay:${(-rnd() * dur).toFixed(2)}s;--rise:${toY - fromY}px"/>`;
+      }
+      add(parentId, out);
+    }
+
+    // Equalization tank: moving surface and mixing air.
+    wave('eq-tank', 379.2, 176.6, 144, { amp: 2, len: 24, dur: 2.2, colour: '#5B8DB8', fill: 'rgba(255,255,255,0.18)' });
+    bubbles('eq-tank', 393.6, 81.6, 252, 180, 8, 7);
+    // MBBR (aeration) reactors: fine-bubble air from the diffusers.
+    for (const [id, x, seed] of [['mbbr-1', 573.1, 11], ['mbbr-2', 779.5, 23]]) {
+      wave(id, x - 11.5, 176.6, 168, { amp: 1.6, len: 28, dur: 3, colour: '#5B8DB8', fill: 'rgba(255,255,255,0.15)' });
+      bubbles(id, x, 145, 252, 180, 18, seed);
+    }
+    // Filter feed tank: a slow, gentle ripple.
+    wave('filter-feed-tank', 974.4, 445.1, 139.2, { amp: 1.2, len: 32, dur: 5, colour: '#5B8DB8', fill: 'rgba(255,255,255,0.3)' });
+    // Treated water outlet: water running along the pipe.
+    add('pipe-treated-outlet', `<path class="outflow" d="M462.6 490 H525 V588" fill="none"
+      stroke="#7dd3fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`);
+  })();
 
   const clock = document.getElementById('clock');
   function tick() {

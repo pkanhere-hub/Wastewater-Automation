@@ -332,7 +332,8 @@
 
   function fit() {
     const r = stage.getBoundingClientRect();
-    fitScale = Math.min((r.width - PAD * 2) / VIEW.w, (r.height - PAD * 2) / VIEW.h);
+    // Fitted view uses 85% of the space so the drawing sits clear of the edges and the controls.
+    fitScale = 0.85 * Math.min((r.width - PAD * 2) / VIEW.w, (r.height - PAD * 2) / VIEW.h);
     scale = fitScale;
     clamp(); apply();
   }

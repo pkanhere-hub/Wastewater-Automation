@@ -55,9 +55,17 @@ COMPONENTS = [
 
 # Callouts moved so they no longer sit on top of the tank labels (x, y, w, h, size in 1/100 pt)
 CALLOUT_MOVES = {
-    'Raw Water Pump': (3456432, 3044952, 1371600, 265176, 1400),
+    'Raw Water Pump': (3520440, 3296000, 1371600, 240000, 1400),
+    'Sludge Recirculation': (9420000, 3128509, 1300000, 694944, None),
     'Feed Pump': (8540496, 5806440, 1463040, 320040, 1600),
 }
+
+
+SUBTITLE_GREY = '#4B5563'
+DROP_SHAPES = {'Label_353'}  # "Feed pumps" note; the Feed Pump callout already names it
+# Re-spacing so nothing overlaps: group -> new top-left (EMU); shape -> override box
+GROUP_MOVES = {'Group 374': (3557016, 2880360)}  # raw water pump, off the EQ tank label
+SHAPE_MOVES = {'Label_194': (137160, 1335024, 548640, 320040, None)}  # "Raw sewage", clear of the flow meter
 
 
 def comp_for(key):
@@ -134,6 +142,8 @@ def render_text(sp, x, y, w, h, override_size=None):
         sz = override_size or int(rpr.get('sz', 1800))
         bold = rpr.get('b') == '1'
         col = color(rpr.find(A + 'solidFill')) or default_col
+        if col.upper() == SUBTITLE_GREY:
+            continue  # unit subtitles ("Coarse + fine screens" etc.) are left off the tablet view
         ppr = p.find(A + 'pPr')
         algn = ppr.get('algn', 'l') if ppr is not None else 'l'
         paras.append((txt, sz / 100 * 12700 / EMU, bold, col, algn))
@@ -240,16 +250,19 @@ for el in tree:
     if el.tag not in (P + 'sp', P + 'grpSp'):
         continue
     key, callout = key_of(el)
+    if key in DROP_SHAPES:
+        continue
     cid = comp_for(key)
     if el.tag == P + 'grpSp':
         gx = el.find(P + 'grpSpPr/' + A + 'xfrm')
-        dx = int(gx.find(A + 'off').get('x')) - int(gx.find(A + 'chOff').get('x'))
-        dy = int(gx.find(A + 'off').get('y')) - int(gx.find(A + 'chOff').get('y'))
+        ox, oy = GROUP_MOVES.get(key, (int(gx.find(A + 'off').get('x')), int(gx.find(A + 'off').get('y'))))
+        dx = ox - int(gx.find(A + 'chOff').get('x'))
+        dy = oy - int(gx.find(A + 'chOff').get('y'))
         svg = ''.join(render_shape(c, dx, dy) for c in el.findall(P + 'sp'))
     elif callout:
         svg = '<g class="callout">%s</g>' % render_shape(el, override=CALLOUT_MOVES.get(callout))
     else:
-        svg = render_shape(el)
+        svg = render_shape(el, override=SHAPE_MOVES.get(key))
     if cid not in groups:
         groups[cid] = []
         order.append(cid)

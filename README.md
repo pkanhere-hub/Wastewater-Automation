@@ -4,7 +4,7 @@
 
 A show-and-tell web app that displays the MBBR sewage treatment plant schematic full screen on an Android tablet in landscape. Level sensors, pumps, the air blower, flow meters and the pressure sensor can be tapped to show demo readings. The values are fixed demo values, not live data.
 
-- Live page: https://pkanhere-hub.github.io/wastewater-automation/
+- Live page: https://pkanhere-hub.github.io/Wastewater-Automation/
 - Works offline after the first visit (service worker), and can be installed from Chrome's menu with **Add to Home screen**, where it opens full screen.
 
 ### Files
